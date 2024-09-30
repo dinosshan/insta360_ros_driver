@@ -40,8 +40,8 @@ class LiveProcessing():
         # Camera intrinsic matrix (K)
         camera_info_msg.K = K.flatten().tolist()
 
-        # Distortion coefficients (D)
-        camera_info_msg.D = D.tolist()
+        # Distortion coefficients (D) - Explicitly cast to float
+        camera_info_msg.D = [float(d) for d in D.flatten()]
 
         # Distortion model (for fisheye cameras, use 'fisheye')
         camera_info_msg.distortion_model = "fisheye"
