@@ -11,11 +11,16 @@ class LiveProcessing():
     def __init__(self):
         rospy.init_node('live_processing_node')
         self.bridge = CvBridge()
-        
+
+        # Parameters for topics, undistortion, and frame IDs
         self.topic_name = '/insta_image_yuv'
         self.undistort = rospy.get_param('undistort', False)
         self.K = np.asarray(rospy.get_param("K", [[1, 0, 0], [0, 1, 0], [0, 0, 1]])).astype(np.float32)
         self.D = np.asarray(rospy.get_param("D", [0, 0, 0, 0])).astype(np.float32)
+
+        # Define frame IDs for front and back cameras
+        self.front_frame_id = 'camera_front_frame'
+        self.back_frame_id = 'camera_back_frame'
 
         # Image subscribers and publishers
         self.image_sub = rospy.Subscriber(self.topic_name, Image, self.processing)
@@ -30,7 +35,7 @@ class LiveProcessing():
         self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
         self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
 
-    def get_camera_info(self, width, height, K, D):
+    def get_camera_info(self, width, height, K, D, frame_id):
         camera_info_msg = CameraInfo()
 
         # Camera resolution
@@ -52,6 +57,9 @@ class LiveProcessing():
         # Projection matrix (P)
         # In this case, we can set it to [K, [0, 0, 0]]
         camera_info_msg.P = np.hstack((K, np.zeros((3, 1)))).flatten().tolist()
+
+        # Set the frame ID for the camera
+        camera_info_msg.header.frame_id = frame_id
 
         return camera_info_msg
 
@@ -80,13 +88,17 @@ class LiveProcessing():
             front_compressed_msg = compress_image_to_msg(front_image, msg.header.stamp)
             back_compressed_msg = compress_image_to_msg(back_image, msg.header.stamp)
 
+            # Set frame ID for the compressed image messages
+            front_compressed_msg.header.frame_id = self.front_frame_id
+            back_compressed_msg.header.frame_id = self.back_frame_id
+
             # Publish the compressed images
             self.front_image_pub.publish(front_compressed_msg)
             self.back_image_pub.publish(back_compressed_msg)
 
             # Publish the CameraInfo messages for front and back cameras
-            front_camera_info_msg = self.get_camera_info(mid_point, height, self.K, self.D)
-            back_camera_info_msg = self.get_camera_info(mid_point, height, self.K, self.D)
+            front_camera_info_msg = self.get_camera_info(mid_point, height, self.K, self.D, self.front_frame_id)
+            back_camera_info_msg = self.get_camera_info(mid_point, height, self.K, self.D, self.back_frame_id)
 
             front_camera_info_msg.header.stamp = msg.header.stamp
             back_camera_info_msg.header.stamp = msg.header.stamp
