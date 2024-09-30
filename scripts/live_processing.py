@@ -19,13 +19,13 @@ class LiveProcessing():
         self.D = np.asarray(rospy.get_param("D", [0, 0, 0, 0])).astype(np.float32)
 
         # Define frame IDs for front and back cameras
-        self.front_frame_id = 'camera_front_frame'
-        self.back_frame_id = 'camera_back_frame'
+        self.front_frame_id = 'front_camera_optical_frame'
+        self.back_frame_id = 'back_camera_optical_frame'
 
         # Image subscribers and publishers
         self.image_sub = rospy.Subscriber(self.topic_name, Image, self.processing)
-        self.front_image_pub = rospy.Publisher('front_camera_image/compressed', CompressedImage, queue_size=10)
-        self.back_image_pub = rospy.Publisher('back_camera_image/compressed', CompressedImage, queue_size=10)
+        self.front_image_pub = rospy.Publisher('front_camera_image/image_raw', Image, queue_size=10)
+        self.back_image_pub = rospy.Publisher('back_camera_image/image_raw', Image, queue_size=10)
 
         # Camera info publishers
         self.front_camera_info_pub = rospy.Publisher('front_camera/camera_info', CameraInfo, queue_size=10)
@@ -65,12 +65,13 @@ class LiveProcessing():
 
     def processing(self, msg):
         try:
+            current_timestamp = rospy.Time.now()
+
             # Convert ROS Image message to OpenCV image
             image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
 
             # Convert the YUV image to BGR format
             bgr_image = cv2.cvtColor(image, cv2.COLOR_YUV2BGR_I420)
-            print(f"Image Size: ({bgr_image.shape[1]}, {bgr_image.shape[0]})")
 
             # Assuming the image is horizontally split for Front | Back
             height, width = bgr_image.shape[:2]
@@ -84,25 +85,25 @@ class LiveProcessing():
                 front_image = cv2.remap(front_image, self.map1_front, self.map2_front, interpolation=cv2.INTER_LINEAR)
                 back_image = cv2.remap(back_image, self.map1_back, self.map2_back, interpolation=cv2.INTER_LINEAR)
 
-            # Convert to compressed image message
-            front_compressed_msg = compress_image_to_msg(front_image, msg.header.stamp)
-            back_compressed_msg = compress_image_to_msg(back_image, msg.header.stamp)
-
-            # Set frame ID for the compressed image messages
-            front_compressed_msg.header.frame_id = self.front_frame_id
-            back_compressed_msg.header.frame_id = self.back_frame_id
-
-            # Publish the compressed images
-            self.front_image_pub.publish(front_compressed_msg)
-            self.back_image_pub.publish(back_compressed_msg)
+            # Convert to raw Image message and set the frame ID
+            front_image_msg = self.bridge.cv2_to_imgmsg(front_image, encoding="bgr8")
+            back_image_msg = self.bridge.cv2_to_imgmsg(back_image, encoding="bgr8")
+            front_image_msg.header.frame_id = self.front_frame_id
+            back_image_msg.header.frame_id = self.back_frame_id
 
             # Publish the CameraInfo messages for front and back cameras
             front_camera_info_msg = self.get_camera_info(mid_point, height, self.K, self.D, self.front_frame_id)
             back_camera_info_msg = self.get_camera_info(mid_point, height, self.K, self.D, self.back_frame_id)
 
-            front_camera_info_msg.header.stamp = msg.header.stamp
-            back_camera_info_msg.header.stamp = msg.header.stamp
+            # Set the timestamp for the images and camera info
+            front_image_msg.header.stamp = current_timestamp
+            back_image_msg.header.stamp = current_timestamp
+            front_camera_info_msg.header.stamp = current_timestamp
+            back_camera_info_msg.header.stamp = current_timestamp
 
+            # Publish the images and camera info
+            self.front_image_pub.publish(front_image_msg)
+            self.back_image_pub.publish(back_image_msg)
             self.front_camera_info_pub.publish(front_camera_info_msg)
             self.back_camera_info_pub.publish(back_camera_info_msg)
 
