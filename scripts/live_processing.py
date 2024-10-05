@@ -74,8 +74,8 @@ class LiveProcessing():
         # Distortion coefficients (D) - Explicitly cast to float
         camera_info_msg.D = [float(d) for d in D.flatten()]
 
-        # Distortion model (for fisheye cameras, use 'fisheye')
-        camera_info_msg.distortion_model = "fisheye"
+        # Distortion model
+        camera_info_msg.distortion_model = "plumb_bob"
 
         # Rectification matrix (identity for now)
         camera_info_msg.R = np.eye(3).flatten().tolist()
