@@ -22,13 +22,33 @@ class LiveProcessing():
         self.front_frame_id = 'front_camera_optical_frame'
         self.back_frame_id = 'back_camera_optical_frame'
 
+        distortion_with_balance = True
+        balance = 1.0
+
         h, w = 1152, 2304  # Hardcoded image size for Insta360 X3
-        self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
-        self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
+        if not distortion_with_balance:
+            # Generate undistortion maps for front and back cameras with the same resolution
+            self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
+            self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
+            width, height = w // 2, h
+        else:
+            # Original width and height
+            original_width, original_height = w // 2, h
+            # Increased resolution (2x width and height for 4x total resolution)
+            new_width, new_height = int(original_width * 2), int(original_height * 2)
+            # Estimate new camera matrix for front and back cameras with increased resolution
+            new_camera_matrix_front = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.K, self.D, (original_width, original_height), np.eye(3), balance=balance, new_size=(new_width, new_height))
+            new_camera_matrix_back = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.K, self.D, (original_width, original_height), np.eye(3), balance=balance, new_size=(new_width, new_height))
+            # Generate undistortion maps with the new 4x resolution
+            self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), new_camera_matrix_front, (new_width, new_height), cv2.CV_32FC1)
+            self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), new_camera_matrix_back, (new_width, new_height), cv2.CV_32FC1)
+            self.K = new_camera_matrix_front
+            self.D = np.zeros((4, 1))
+            width, height = new_width, new_height
 
         # Precompute camera info messages
-        self.front_camera_info_msg = self.get_camera_info(w//2, h, self.K, self.D, self.front_frame_id)
-        self.back_camera_info_msg = self.get_camera_info(w//2, h, self.K, self.D, self.back_frame_id)
+        self.front_camera_info_msg = self.get_camera_info(width, height, self.K, self.D, self.front_frame_id)
+        self.back_camera_info_msg = self.get_camera_info(width, height, self.K, self.D, self.back_frame_id)
 
         queue_size = 10
 
@@ -71,7 +91,7 @@ class LiveProcessing():
 
     def processing(self, msg):
         try:
-            current_timestamp = rospy.Time.now()
+            current_timestamp = msg.header.stamp  # rospy.Time.now()
 
             # Convert ROS Image message to OpenCV image
             image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
