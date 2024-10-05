@@ -22,8 +22,9 @@ class LiveProcessing():
         self.front_frame_id = 'front_camera_optical_frame'
         self.back_frame_id = 'back_camera_optical_frame'
 
-        distortion_with_balance = True
+        distortion_with_balance = False
         balance = 1.0
+        image_scale = 1.0
 
         h, w = 1152, 2304  # Hardcoded image size for Insta360 X3
         if not distortion_with_balance:
@@ -34,8 +35,8 @@ class LiveProcessing():
         else:
             # Original width and height
             original_width, original_height = w // 2, h
-            # Increased resolution (2x width and height for 4x total resolution)
-            new_width, new_height = int(original_width * 2), int(original_height * 2)
+            # Increased resolution
+            new_width, new_height = int(original_width * image_scale), int(original_height * image_scale)
             # Estimate new camera matrix for front and back cameras with increased resolution
             new_camera_matrix_front = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.K, self.D, (original_width, original_height), np.eye(3), balance=balance, new_size=(new_width, new_height))
             new_camera_matrix_back = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(self.K, self.D, (original_width, original_height), np.eye(3), balance=balance, new_size=(new_width, new_height))
