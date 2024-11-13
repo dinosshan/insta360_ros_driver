@@ -34,7 +34,11 @@ class LiveProcessing():
             self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
             width, height = w // 2 - 2 * self.crop_border, h - 2 * self.crop_border
             self.K = self.K
+            self.K[0, 2] -= self.crop_border
+            self.K[1, 2] -= self.crop_border
         else:
+            rospy.logerr("Distortion with balance is not supported yet.")
+            return
             # Original width and height
             original_width, original_height = w // 2, h
             # Increased resolution
@@ -120,8 +124,9 @@ class LiveProcessing():
                 back_image = cv2.remap(back_image, self.map1_back, self.map2_back, interpolation=interpolation_method)
 
                 # Crop the image to remove the black borders
-                front_image = front_image[self.crop_border:-self.crop_border, self.crop_border:-self.crop_border]
-                back_image = back_image[self.crop_border:-self.crop_border, self.crop_border:-self.crop_border]
+                if self.crop_border > 0:
+                    front_image = front_image[self.crop_border:-self.crop_border, self.crop_border:-self.crop_border]
+                    back_image = back_image[self.crop_border:-self.crop_border, self.crop_border:-self.crop_border]
 
             # Convert to raw Image message and set the frame ID
             front_image_msg = self.bridge.cv2_to_imgmsg(front_image, encoding="bgr8")
