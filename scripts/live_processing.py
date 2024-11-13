@@ -61,7 +61,7 @@ class LiveProcessing():
         self.back_camera_info_msg = self.get_camera_info(width, height, self.K, self.D, self.back_frame_id)
 
         queue_size = 1
-        self.latency = rospy.Duration.from_sec(0.2)  # 200 ms latency
+        # self.latency = rospy.Duration.from_sec(0.2)  # 200 ms latency
 
         # Image subscribers and publishers
         self.image_sub = rospy.Subscriber(self.topic_name, Image, self.processing)
@@ -102,7 +102,7 @@ class LiveProcessing():
 
     def processing(self, msg):
         try:
-            current_timestamp = msg.header.stamp + self.latency
+            current_timestamp = msg.header.stamp
 
             # Convert ROS Image message to OpenCV image
             image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
