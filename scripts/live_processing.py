@@ -27,11 +27,12 @@ class LiveProcessing():
         image_scale = 1.0
 
         h, w = 1152, 2304  # Hardcoded image size for Insta360 X3
+        self.crop_border = h // 16
         if not distortion_with_balance:
             # Generate undistortion maps for front and back cameras with the same resolution
             self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
             self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
-            width, height = w // 2, h
+            width, height = w // 2 - 2 * self.crop_border, h - 2 * self.crop_border
             self.K = self.K
         else:
             # Original width and height
@@ -44,7 +45,7 @@ class LiveProcessing():
             # Generate undistortion maps with the new 4x resolution
             self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), new_camera_matrix_front, (new_width, new_height), cv2.CV_32FC1)
             self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), new_camera_matrix_back, (new_width, new_height), cv2.CV_32FC1)
-            width, height = new_width, new_height
+            width, height = new_width - 2 * self.crop_border, new_height - 2 * self.crop_border
             self.K = new_camera_matrix_front
 
         # Update the camera matrix and distortion coefficients to reflect the undistorted image
@@ -117,6 +118,10 @@ class LiveProcessing():
                 interpolation_method = cv2.INTER_LINEAR
                 front_image = cv2.remap(front_image, self.map1_front, self.map2_front, interpolation=interpolation_method)
                 back_image = cv2.remap(back_image, self.map1_back, self.map2_back, interpolation=interpolation_method)
+
+                # Crop the image to remove the black borders
+                front_image = front_image[self.crop_border:-self.crop_border, self.crop_border:-self.crop_border]
+                back_image = back_image[self.crop_border:-self.crop_border, self.crop_border:-self.crop_border]
 
             # Convert to raw Image message and set the frame ID
             front_image_msg = self.bridge.cv2_to_imgmsg(front_image, encoding="bgr8")
