@@ -56,8 +56,8 @@ class LiveProcessing():
 
         # Image subscribers and publishers
         self.image_sub = rospy.Subscriber(self.topic_name, Image, self.processing)
-        self.front_image_pub = rospy.Publisher('front_camera_image/image_raw', Image, queue_size=queue_size)
-        self.back_image_pub = rospy.Publisher('back_camera_image/image_raw', Image, queue_size=queue_size)
+        self.front_image_pub = rospy.Publisher('front_camera/image_raw', Image, queue_size=queue_size)
+        self.back_image_pub = rospy.Publisher('back_camera/image_raw', Image, queue_size=queue_size)
 
         # Camera info publishers
         self.front_camera_info_pub = rospy.Publisher('front_camera/camera_info', CameraInfo, queue_size=queue_size)
