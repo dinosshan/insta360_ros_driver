@@ -32,6 +32,7 @@ class LiveProcessing():
             self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
             self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K, (w//2, h), cv2.CV_32FC1)
             width, height = w // 2, h
+            self.K = self.K
         else:
             # Original width and height
             original_width, original_height = w // 2, h
@@ -44,10 +45,10 @@ class LiveProcessing():
             self.map1_front, self.map2_front = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), new_camera_matrix_front, (new_width, new_height), cv2.CV_32FC1)
             self.map1_back, self.map2_back = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), new_camera_matrix_back, (new_width, new_height), cv2.CV_32FC1)
             width, height = new_width, new_height
+            self.K = new_camera_matrix_front
 
         # Update the camera matrix and distortion coefficients to reflect the undistorted image
         self.distortion_model = "plumb_bob"
-        self.K = new_camera_matrix_front
         self.D = np.zeros((5, 1))
 
         # Precompute camera info messages
