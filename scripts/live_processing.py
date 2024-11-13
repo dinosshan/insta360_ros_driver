@@ -51,7 +51,8 @@ class LiveProcessing():
         self.front_camera_info_msg = self.get_camera_info(width, height, self.K, self.D, self.front_frame_id)
         self.back_camera_info_msg = self.get_camera_info(width, height, self.K, self.D, self.back_frame_id)
 
-        queue_size = 10
+        queue_size = 1
+        self.latency = rospy.Duration.from_sec(0.2)  # 200 ms latency
 
         # Image subscribers and publishers
         self.image_sub = rospy.Subscriber(self.topic_name, Image, self.processing)
@@ -92,7 +93,7 @@ class LiveProcessing():
 
     def processing(self, msg):
         try:
-            current_timestamp = msg.header.stamp  # rospy.Time.now()
+            current_timestamp = msg.header.stamp + self.latency
 
             # Convert ROS Image message to OpenCV image
             image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
@@ -131,8 +132,8 @@ class LiveProcessing():
 
             # Publish the images and camera info
             self.front_image_pub.publish(front_image_msg)
-            self.back_image_pub.publish(back_image_msg)
             self.front_camera_info_pub.publish(front_camera_info_msg)
+            self.back_image_pub.publish(back_image_msg)
             self.back_camera_info_pub.publish(back_camera_info_msg)
 
         except CvBridgeError as e:
