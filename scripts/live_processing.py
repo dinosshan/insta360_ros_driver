@@ -46,6 +46,7 @@ class LiveProcessing():
             width, height = new_width, new_height
 
         # Update the camera matrix and distortion coefficients to reflect the undistorted image
+        self.distortion_model = "plumb_bob"
         self.K = new_camera_matrix_front
         self.D = np.zeros((5, 1))
 
@@ -79,7 +80,7 @@ class LiveProcessing():
         camera_info_msg.D = [float(d) for d in D.flatten()]
 
         # Distortion model
-        camera_info_msg.distortion_model = "plumb_bob"
+        camera_info_msg.distortion_model = self.distortion_model
 
         # Rectification matrix (identity for now)
         camera_info_msg.R = np.eye(3).flatten().tolist()
